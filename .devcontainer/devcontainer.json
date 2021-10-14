@@ -1,0 +1,17 @@
+{
+  "name": "OCaml",
+  "dockerFile": "Dockerfile",
+
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash"
+  },
+
+  "extensions": [],
+
+  "forwardPorts": [8080],
+
+  "postCreateCommand": "sudo apt update; sudo apt install -y nodejs npm; sudo mv -f /usr/bin/opam-2.1 /usr/bin/opam; make deps; dune build",
+
+  "remoteUser": "opam"
+}
+
