@@ -20,19 +20,21 @@
 
 open Js_of_ocaml
 open Js_of_ocaml_tyxml
+open Js_top_worker_rpc
 
 (* open Brr_io *)
 open Lwt
 module Worker = Brr_webworkers.Worker
+module Rpc_lwt = Idl.Make (Lwt)
 
-module Toprpc = Toplevel_api.Make (Rpc_lwt.GenClient ())
+module Toprpc = Js_top_worker_rpc.Toplevel_api_gen.Make (Rpc_lwt.GenClient ())
 
 (* Handy infix bind-style operator for the RPCs *)
 let rpc_bind x f =
   x |> Rpc_lwt.T.get >>= function
   | Ok x ->
     f x
-  | Error (Toplevel_api.InternalError s) ->
+  | Error (Toplevel_api_gen.InternalError s) ->
     Lwt.fail (Failure (Printf.sprintf "Rpc failure: %s" s))
 
 let by_id s = Dom_html.getElementById s
@@ -67,7 +69,7 @@ let rec iter_on_sharp ~f x =
 
 let current_position = ref 0
 
-let highlight_location (h : Toplevel_api.highlight) =
+let highlight_location (h : Toplevel_api_gen.highlight) =
   let x = ref 0 in
   let output = by_id "output" in
   let first =
@@ -167,9 +169,11 @@ let run s =
   let output = by_id "output" in
   let textbox : 'a Js.t = by_id_coerce "userinput" Dom_html.CoerceTo.textarea in
   textbox##.disabled := Js._false;
-  let context = Rpc_brr.Worker_rpc.start worker 10 (timeout_container worker) in
+  let context =
+    Rpc_brr.Worker_rpc.start worker 1000 (timeout_container worker)
+  in
   let rpc = Rpc_brr.Worker_rpc.rpc context in
-  let handle_output (o : Toplevel_api.exec_result) =
+  let handle_output (o : Toplevel_api_gen.exec_result) =
     Option.iter (append Colorize.ocaml output "sharp") o.sharp_ppf;
     Option.iter (append Colorize.text output "stdout") o.stdout;
     Option.iter (append Colorize.text output "stderr") o.stderr;
@@ -180,7 +184,7 @@ let run s =
     ignore textbox##focus;
     ()
   in
-  let handle_completion (c : Toplevel_api.completion_result) =
+  let handle_completion (c : Toplevel_api_gen.completion_result) =
     if List.length c.completions = 1 then
       let txt = String.sub (Js.to_string textbox##.value) 0 c.n in
       let txt = txt ^ List.hd c.completions in

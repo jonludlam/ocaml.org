@@ -6,5 +6,5 @@ let () =
   in
   Ev.listen
     Ev.click
-    (fun _ -> Ocamlorg_toplevel.Toplevel.run "/toplevels/worker.js")
+    (fun _ -> Ocamlorg_toplevel.Toplevel.run "/assets/worker.js")
     (El.as_target button)

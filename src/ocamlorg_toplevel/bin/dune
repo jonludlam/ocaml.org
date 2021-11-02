@@ -1,31 +1,8 @@
-; Worker library
-
-(library
- (name worker)
- (modules worker uTop_complete uTop_lexer uTop_token uTop)
- (libraries
-  brr
-  ocamlorg_toplevel
-  js_of_ocaml-toplevel
-  js_of_ocaml-compiler
-  astring
-  rpclib)
- (preprocess
-  (per_module
-   ((action
-     (run %{bin:cppo} -V OCAML:%{ocaml_version} %{input-file}))
-    uTop_complete
-    uTop)
-   ((pps js_of_ocaml-ppx)
-    worker))))
-
-(ocamllex uTop_lexer)
-
 ; Base
 
 (executable
  (name toplevel_base)
- (libraries ocamlorg_toplevel base)
+ (libraries ocamlorg_toplevel)
  (modules toplevel_base)
  (modes js))
 
@@ -38,7 +15,7 @@
 (executable
  (name worker_base)
  (modules worker_base)
- (libraries worker stdlib base)
+ (libraries js_top_worker stdlib base)
  (flags
   (:standard -rectypes -linkall))
  (modes byte))
@@ -63,7 +40,7 @@
 
 (executable
  (name toplevel_stdlib)
- (libraries ocamlorg_toplevel stdlib)
+ (libraries ocamlorg_toplevel)
  (modules toplevel_stdlib)
  (modes js))
 
@@ -78,7 +55,7 @@
 (executable
  (name worker_stdlib)
  (modules worker_stdlib)
- (libraries worker stdlib)
+ (libraries js_top_worker stdlib)
  (flags
   (:standard -rectypes -linkall))
  (preprocess
@@ -112,7 +89,7 @@
    ../worker_base.js)
   (action
    (progn
-    (run jsoo_minify ../toplevel_stdlib.bc.js -o stdlib-4.13.0.js)
-    (run jsoo_minify ../worker.js -o worker.js)
-    (run jsoo_minify ../toplevel_base.bc.js -o base-v0.14.1.js)
-    (run jsoo_minify ../worker_base.js -o worker_base.js)))))
+    (run cp ../toplevel_stdlib.bc.js stdlib-4.13.0.js)
+    (run cp ../worker.js worker.js)
+    (run cp ../toplevel_base.bc.js base-v0.14.1.js)
+    (run cp ../worker_base.js worker_base.js)))))

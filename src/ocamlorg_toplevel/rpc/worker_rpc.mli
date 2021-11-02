@@ -18,6 +18,8 @@ val start : Brr_webworkers.Worker.t -> int -> (unit -> unit) -> context
     RPC before raising an error, and [timeout_fn] is called when a timeout
     occurs. *)
 
+open Js_top_worker_rpc
+
 val rpc : context -> Rpc.call -> Rpc.response Lwt.t
 (** [rpc context call] returns a promise containing the result from the worker.
     If we wait longer than the timeout specified in [context] for a response,

@@ -1,0 +1,6 @@
+(library
+ (name rpc_brr)
+ (public_name ocamlorg.rpc_brr)
+ (preprocess
+  (pps js_of_ocaml-ppx))
+ (libraries brr js_top_worker.rpc lwt))
