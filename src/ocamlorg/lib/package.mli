@@ -109,7 +109,7 @@ val license_file
 val status
   :  kind:[< `Package | `Universe of string ]
   -> t
-  -> [ `Success | `Failure | `Unknown ] Lwt.t
+  -> ([ `Success | `Failure | `Unknown ] * string option) Lwt.t
 (** Get the build status of a package *)
 
 val module_map
@@ -129,8 +129,14 @@ val init : ?disable_polling:bool -> unit -> state
 (** [init ()] initialises the opam-repository state. By default
     [disable_polling] is set to [false], but can be disabled for tests. *)
 
-val toplevel : t -> string option
+val toplevel
+  :  t
+  -> string
+  -> (string list, [> `Msg of string ]) result Lwt.t
 (** Get the URL of the toplevel script for the given package. *)
+
+val proxy_jsoo : string list -> (string, [> `Msg of string ]) result Lwt.t
+(** Proxy a request to the toplevels server *)
 
 val all_packages_latest : state -> t list
 (** Get the list of the latest version of every opam packages. The name and

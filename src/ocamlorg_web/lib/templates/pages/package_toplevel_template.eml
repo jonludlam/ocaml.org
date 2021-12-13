@@ -1,4 +1,4 @@
-let render toplevel_url =
+let render worker_url =
 <div>
   <h2 class="text-lg font-medium text-gray-900">Toplevel</h2>
   <p class="mt-1 text-sm text-gray-500">Try this library in your browser.</p>
@@ -89,4 +89,7 @@ let render toplevel_url =
     <textarea id="userinput">Loading ...</textarea>
   </div>
 </div>
-<script type='text/javascript' src='<%s toplevel_url %>'></script>
+<script type='text/javascript' src='/toplevel.js'></script>
+<script type='text/javascript' defer>
+window.onload=function() {myToplevel.start('<%s! worker_url %>')};
+</script>

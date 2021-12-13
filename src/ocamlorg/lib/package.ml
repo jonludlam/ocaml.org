@@ -419,19 +419,6 @@ let get_package t name version =
   Option.bind x (OpamPackage.Version.Map.find_opt version)
   |> Option.map (fun info -> { version; info; name })
 
-let topelevel_url name version = "/toplevels/" ^ name ^ "-" ^ version ^ ".js"
-
-let toplevel t =
-  let name = Name.to_string t.name in
-  let version = Version.to_string t.version in
-  let path =
-    Fpath.(to_string (Config.toplevels_path / (name ^ "-" ^ version ^ ".js")))
-  in
-  if Sys.file_exists path then
-    Some (topelevel_url name version)
-  else
-    None
-
 module Documentation = struct
   type toc =
     { title : string
@@ -510,6 +497,12 @@ let documentation_path ~kind name version =
     ^ "/doc"
     ^ "/"
 
+let toplevel_path universe name version =
+  Config.toplevels_url ^ "universes/" ^ universe ^ "/" ^ name ^ "/" ^ version
+
+let toplevels_json universe name version =
+  toplevel_path universe name version ^ "/toplevels.json"
+
 let http_get url =
   let open Lwt.Syntax in
   Logs.info (fun m -> m "GET %s" url);
@@ -529,6 +522,30 @@ let http_get url =
   | false ->
     let+ () = Cohttp_lwt.Body.drain_body body in
     Error (`Msg "Failed to fetch the documentation page")
+
+
+
+let toplevel t universe =
+  let name = Name.to_string t.name in
+  let version = Version.to_string t.version in
+  let open Lwt.Syntax in
+  let path = toplevels_json universe name version in
+  let+ content = http_get path in
+  match content with
+  | Error (`Msg err) ->
+    Logs.err (fun m -> m "Failed to receive toplevels.json: %s" err);
+    Error (`Msg err)
+  | Ok content ->
+    let json = Yojson.Safe.from_string content in
+    (match json with
+    | (`List toplevels) ->
+        Ok (List.map (fun toplevel -> Yojson.Safe.to_string toplevel) toplevels)
+    | _ ->
+      Error (`Msg "Bad json"))
+
+let proxy_jsoo path =
+  let url = Config.toplevels_url ^ String.concat "/" path in
+  http_get url
 
 let documentation_page ~kind t path =
   let open Lwt.Syntax in
@@ -575,15 +592,24 @@ let status ~kind t =
   let root =
     package_path ~kind (Name.to_string t.name) (Version.to_string t.version)
   in
-  let path = root ^ "status.json" in
+  let path = root ^ "status2.json" in
   let+ content = http_get path in
   match content with
-  | Ok "\"Built\"" ->
-    `Success
-  | Ok "\"Failed\"" ->
-    `Failure
+  | Ok content ->
+    let json = Yojson.Safe.from_string content in
+    (match json with
+    | `Assoc fields ->
+      (match
+         List.assoc_opt "success" fields, List.assoc_opt "universe" fields
+       with
+      | Some (`Bool b), Some (`String s) ->
+        (if b then `Success else `Failure), Some s
+      | _, _ ->
+        `Unknown, None)
+    | _ ->
+      `Unknown, None)
   | _ ->
-    `Unknown
+    `Unknown, None
 
 let module_map ~kind t =
   let open Lwt.Syntax in

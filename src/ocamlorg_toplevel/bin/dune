@@ -1,95 +1,19 @@
 ; Base
 
 (executable
- (name toplevel_base)
+ (name toplevel)
  (libraries ocamlorg_toplevel)
- (modules toplevel_base)
- (modes js))
-
-(rule
- (targets export_base.txt)
- (deps toplevel_base.bc)
- (action
-  (run jsoo_listunits -o %{targets} stdlib base)))
-
-(executable
- (name worker_base)
- (modules worker_base)
- (libraries js_top_worker stdlib base)
- (flags
-  (:standard -rectypes -linkall))
- (modes byte))
-
-(rule
- (targets worker_base.js)
- (action
-  (run
-   %{bin:js_of_ocaml}
-   --export
-   %{dep:export_base.txt}
-   --toplevel
-   --pretty
-   +toplevel.js
-   +dynlink.js
-   +base/runtime.js
-   %{dep:worker_base.bc}
-   -o
-   %{targets})))
-
-; Stdlib
-
-(executable
- (name toplevel_stdlib)
- (libraries ocamlorg_toplevel)
- (modules toplevel_stdlib)
- (modes js))
-
-; Stdlib worker
-
-(rule
- (targets export_stdlib.txt)
- (deps toplevel_stdlib.bc)
- (action
-  (run jsoo_listunits -o %{targets} stdlib)))
-
-(executable
- (name worker_stdlib)
- (modules worker_stdlib)
- (libraries js_top_worker stdlib)
- (flags
-  (:standard -rectypes -linkall))
+ (modules toplevel)
  (preprocess
   (pps js_of_ocaml-ppx))
- (modes byte))
-
-(rule
- (targets worker.js)
- (action
-  (run
-   %{bin:js_of_ocaml}
-   --export
-   %{dep:export_stdlib.txt}
-   --toplevel
-   --pretty
-   +toplevel.js
-   +dynlink.js
-   %{dep:worker_stdlib.bc}
-   -o
-   %{targets})))
+ (modes js))
 
 (subdir
  js/
  (rule
   (alias toplevel)
-  (targets stdlib-4.13.0.js worker.js worker_base.js base-v0.14.1.js)
-  (deps
-   ../toplevel_stdlib.bc.js
-   ../toplevel_base.bc.js
-   ../worker.js
-   ../worker_base.js)
+  (targets toplevel.js)
+  (deps ../toplevel.bc.js)
   (action
    (progn
-    (run cp ../toplevel_stdlib.bc.js stdlib-4.13.0.js)
-    (run cp ../worker.js worker.js)
-    (run cp ../toplevel_base.bc.js base-v0.14.1.js)
-    (run cp ../worker_base.js worker_base.js)))))
+    (run cp ../toplevel.bc.js toplevel.js)))))

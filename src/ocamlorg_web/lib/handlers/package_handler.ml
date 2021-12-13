@@ -70,12 +70,19 @@ let package_versioned t kind req =
         ~default:(description |> Omd.of_string |> Omd.to_html)
     in
     let license = Ocamlorg.Package.license_file ~kind package in
-    let* status = Ocamlorg.Package.status ~kind package in
+    let* status, universe_opt = Ocamlorg.Package.status ~kind package in
     let content = Package_template.render ~readme ~license package in
     let versions =
       Ocamlorg.Package.get_package_versions t name |> Option.value ~default:[]
     in
-    let toplevel = Ocamlorg.Package.toplevel package in
+    let* toplevels =
+      match universe_opt with
+      | Some u ->
+        Ocamlorg.Package.toplevel package u
+      | None ->
+        Lwt.return (Ok [])
+    in
+    let toplevel = match toplevels with Ok x -> x | Error _ -> [] in
     Package_layout_template.render
       ~title:
         (Printf.sprintf
@@ -92,7 +99,7 @@ let package_versioned t kind req =
       ~versions
       ~tab:Overview
       ~status
-      ?toplevel
+      ~toplevel
       content
     |> Dream.html
 
@@ -136,7 +143,7 @@ let package_doc t kind req =
     in
     let* docs = Ocamlorg.Package.documentation_page ~kind package path in
     let* map = Ocamlorg.Package.module_map ~kind package in
-    let* status = Ocamlorg.Package.status ~kind package in
+    let* status, universe_opt = Ocamlorg.Package.status ~kind package in
     (match docs with
     | None ->
       Page_handler.not_found req
@@ -173,7 +180,14 @@ let package_doc t kind req =
             (Ocamlorg.Package.Name.to_string name)
             (Ocamlorg.Package.Version.to_string version)
       in
-      let toplevel = Ocamlorg.Package.toplevel package in
+      let* toplevels =
+        match universe_opt with
+        | Some u ->
+          Ocamlorg.Package.toplevel package u
+        | None ->
+          Lwt.return (Ok [])
+      in
+      let toplevel = match toplevels with Ok x -> x | Error _ -> [] in
       Package_layout_template.render
         ~title
         ~description:
@@ -187,38 +201,48 @@ let package_doc t kind req =
         ~status
         ~package
         ~extra_nav
-        ?toplevel
+        ~toplevel
         (Package_doc_template.render ~root map doc)
       |> Dream.html)
 
 let package_toplevel t kind req =
+  let open Lwt.Syntax in
   let name = Ocamlorg.Package.Name.of_string @@ Dream.param "name" req in
   let version =
     Ocamlorg.Package.Version.of_string @@ Dream.param "version" req
   in
   let package = Ocamlorg.Package.get_package t name version in
+  let kind =
+    match kind with
+    | Package ->
+      `Package
+    | Universe ->
+      `Universe (Dream.param "hash" req)
+  in
   match package with
   | None ->
     Page_handler.not_found req
   | Some package ->
-    let toplevel = Ocamlorg.Package.toplevel package in
+    let* status, universe_opt = Ocamlorg.Package.status ~kind package in
+    let* toplevels =
+      match universe_opt with
+      | Some u ->
+        Ocamlorg.Package.toplevel package u
+      | None ->
+        Lwt.return (Ok [])
+    in
+    let toplevel = match toplevels with Ok x -> x | Error _ -> [] in
     (match toplevel with
-    | None ->
+    | [] ->
       Page_handler.not_found req
-    | Some toplevel ->
-      let kind =
-        match kind with
-        | Package ->
-          `Package
-        | Universe ->
-          `Universe (Dream.param "hash" req)
-      in
-      let open Lwt.Syntax in
-      let* status = Ocamlorg.Package.status ~kind package in
+    | toplevel' :: _ ->
       let versions =
         Ocamlorg.Package.get_package_versions t name |> Option.value ~default:[]
       in
-      let content = Package_toplevel_template.render toplevel in
+      let content =
+        Package_toplevel_template.render
+          (toplevel')
+      in
       let title =
         Printf.sprintf
           "Toplevel · %s %s · OCaml Packages"
@@ -242,3 +266,13 @@ let package_toplevel t kind req =
         ~toplevel
         content
       |> Dream.html)
+
+let package_toplevels _t req =
+  let open Lwt.Syntax in
+  let path = Dream.path req in
+  let* result = Ocamlorg.Package.proxy_jsoo path in
+  match result with
+  | Ok x ->
+    Dream.respond ~headers:["Content-Type","text/javascript"] x
+  | Error (`Msg m) ->
+    Dream.respond ~code:500 ("Error: " ^ m)

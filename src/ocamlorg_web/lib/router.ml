@@ -96,11 +96,17 @@ let graphql_route t =
     ; Dream.get "/graphiql" (Dream.graphiql "/api")
     ]
 
-let toplevels_route =
+let toplevels_route t =
   Dream.scope
     "/toplevels"
     [ Dream_encoding.compress ]
-    [ Dream.get "/**" (Dream.static (Fpath.to_string Ocamlorg.toplevels_path)) ]
+    [ Dream.get "/**" (Package_handler.package_toplevels t) ]
+
+let toplevel_js =
+  Dream.scope
+    ""
+    [ Dream_encoding.compress ]
+    [ Dream.get "/toplevel.js" (fun _req -> Dream.respond ~headers:["Content-Type","text/javascript"] Toplevel_js.content) ]
 
 let router t =
   Dream.router
@@ -108,7 +114,8 @@ let router t =
     ; package_route t
     ; graphql_route t
     ; redirection_routes
-    ; toplevels_route
+    ; toplevels_route t
+    ; toplevel_js
     ; Dream.get "/assets/**" (Dream.static ~loader "")
     ; Dream.get "/media/**" (Dream.static ~loader:media_loader "")
       (* Last one so that we don't apply the index html middleware on every

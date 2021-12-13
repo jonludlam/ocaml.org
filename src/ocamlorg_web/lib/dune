@@ -64,4 +64,16 @@
     -o
     %{targets}))))
 
+(rule
+ (targets toplevel_js.ml)
+ (deps
+  (:toplevel ../../ocamlorg_toplevel/bin/js/toplevel.js))
+ (action
+  (with-stdout-to
+   %{targets}
+   (progn
+    (echo "let content = {topleveljs|")
+    (cat %{toplevel})
+    (echo "|topleveljs}")))))
+
 (include_subdirs unqualified)

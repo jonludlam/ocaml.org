@@ -158,10 +158,20 @@ let timeout_container worker () =
   | None ->
     ()
 
-let run s =
+type config = {
+  package : string;
+  cma : string;
+  dep_cmas : (string * string) list;
+  cmis : string list;
+  digest : string
+} [@@deriving yojson]
+
+let run json =
+  let config_json = Yojson.Safe.from_string json in
+  let config = match config_of_yojson config_json with | Ok c -> c | _ -> failwith "Bad config" in 
   let ( let* ) = rpc_bind in
   let worker =
-    try Worker.create (Jstr.v s) with
+    try Worker.create (Jstr.of_string (Printf.sprintf "/toplevels/jsoo/toplevel-by-digest/%s/toplevel.js" config.digest)) with
     | Jv.Error _ ->
       failwith "Failed to created worker"
   in
@@ -222,6 +232,10 @@ let run s =
     let* c = Toprpc.complete rpc content in
     handle_completion c;
     Lwt.return ()
+  in
+  let init () =
+    let dep_cmas = List.filter (fun (path, _) -> not @@ Astring.String.is_suffix ~affix:"ocamltoplevel.cma.js" path) config.dep_cmas in 
+    Toprpc.init rpc dep_cmas config.cmis
   in
   let setup () =
     let* o = Toprpc.setup rpc () in
@@ -310,7 +324,7 @@ let run s =
       (fun s -> Js.to_string s ^ "\n")
   in
   Sys_js.set_channel_filler stdin readline;
-  Lwt.async setup;
+  Lwt.async (fun () -> let* () = init () in setup ());
   History.setup ();
   textbox##.value := Js.string "";
   (* Run initial code if any *)
