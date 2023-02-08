@@ -18,7 +18,7 @@ homepage: "https://github.com/ocaml/ocaml.org"
 doc: "https://ocaml.github.io/ocaml.org/"
 bug-reports: "https://github.com/ocaml/ocaml.org/issues"
 depends: [
-  "dune" {>= "2.8"}
+  "dune" {>= "3.0"}
   "ocaml" {>= "5.0.0"}
   "brr"
   "esbuild"

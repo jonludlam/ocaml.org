@@ -22,9 +22,12 @@ let timeout_container () =
           ])
   | None -> ()
 
+let cmi_urls () = List.map (fun cmi ->
+  Printf.sprintf "stdlib/%s" cmi) Cmis.cmis
+
 let initialise s callback =
   let rpc = Js_top_worker_client.start s 100000 callback in
-  let* _ = Toprpc.init rpc Toplevel_api.{ cmas = []; cmi_urls = [] } in
+  let* _ = Toprpc.init rpc Toplevel_api.{ cmas = []; cmi_urls = cmi_urls() } in
   Lwt.return rpc
 
 let or_raise = function

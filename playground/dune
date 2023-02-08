@@ -21,7 +21,8 @@
   (targets worker.min.js)
   (mode promote-until-clean)
   (deps
-   (:js %{workspace_root}/src/worker.js))
+   (:js %{workspace_root}/src/worker.js)
+   stdlib)
   (action
    (run jsoo_minify %{js} -o %{targets})))
  (rule
@@ -30,4 +31,10 @@
   (deps
    (:js %{workspace_root}/src/merlin_worker.bc.js))
   (action
-   (run jsoo_minify %{js} -o %{targets}))))
+   (run jsoo_minify %{js} -o %{targets})))
+ (rule
+  (targets (dir stdlib))
+  (mode promote-until-clean)
+  (action
+   (run ../gen_stdlib.sh)))
+)
