@@ -9,6 +9,9 @@ module Package : sig
   val documentation :
     ?hash:string -> ?version:string -> ?page:string -> string -> string
 
+  val src :
+    ?hash:string -> ?version:string -> ?page:string -> string -> string
+  
   val file :
     ?hash:string -> ?version:string -> filepath:string -> string -> string
 end = struct
@@ -22,6 +25,9 @@ end = struct
 
   let documentation ?hash ?version ?(page = "index.html") =
     base ?hash ?version ("/doc/" ^ page)
+
+  let src ?hash ?version ?(page = "index.html") =
+    base ?hash ?version ("/src/" ^ page)
 
   let file ?hash ?version ~filepath = base ?hash ?version ("/" ^ filepath)
 end

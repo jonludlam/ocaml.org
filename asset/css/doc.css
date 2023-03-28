@@ -16,6 +16,14 @@ div.odoc-include .spec {
   margin-top: 1rem /* 16px */;
 }
 
+/* Source links float inside preformated text or headings. */
+a.source_link {
+  float: right;
+  color: var(--source-color);
+  font-family: "Fira Sans", Helvetica, Arial, sans-serif;
+  font-size: initial;
+}
+
 div.odoc div.spec code {
   white-space: pre-wrap;
 }
@@ -285,4 +293,25 @@ span.icon-expand.open::before {
   color:white;
   display:inline-block;
   margin-left:0.5em;
+}
+
+.source_container {
+  display: flex;
+}
+
+.source_line_column {
+  padding-right: 0.5em;
+  text-align: right;
+  background: #eee8d5;
+}
+
+.source_line {
+  padding: 0 1em;
+}
+
+.source_code {
+  flex-grow: 1;
+  background: #fdf6e3;
+  padding: 0 0.3em;
+  color: #657b83;
 }

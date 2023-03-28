@@ -451,7 +451,7 @@ let package_overview t kind req =
        ~content_title:None ~dependencies ~dev_dependencies ~rev_dependencies
        ~conflicts frontend_package)
 
-let package_documentation t kind req =
+let package_documentation t is_src kind req =
   let name = Ocamlorg_package.Name.of_string @@ Dream.param req "name" in
   let version_from_url = Dream.param req "version" in
   let</>? package, frontend_package =
@@ -470,7 +470,10 @@ let package_documentation t kind req =
       ?version:(Ocamlorg_frontend.Package.url_version frontend_package)
       (Ocamlorg_package.Name.to_string name)
   in
-  let* docs = Ocamlorg_package.documentation_page ~kind package path in
+  let* docs =
+    if is_src
+    then Ocamlorg_package.src_page ~kind package path  
+    else Ocamlorg_package.documentation_page ~kind package path in
   http_or_404
     ~not_found:(fun () ->
       Ocamlorg_frontend.package_documentation_not_found ~page:path
@@ -542,12 +545,12 @@ let package_documentation t kind req =
         | Parameter i -> Parameter { name = p.name; href = p.href; number = i }
         | Class -> Class { name = p.name; href = p.href }
         | ClassType -> ClassType { name = p.name; href = p.href }
-        | Page | LeafPage | File ->
+        | Page | LeafPage | File | Source ->
             failwith "library paths do not contain Page, LeafPage or File"
       in
 
       match first_path_item.kind with
-      | Page | LeafPage | File ->
+      | Page | LeafPage | File | Source ->
           Ocamlorg_frontend.Package_breadcrumbs.Documentation
             (Page first_path_item.name)
       | Module | ModuleType | Parameter _ | Class | ClassType ->

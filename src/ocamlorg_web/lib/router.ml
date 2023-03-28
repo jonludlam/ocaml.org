@@ -67,11 +67,18 @@ let package_route t =
         ((Handler.package_overview t) Handler.Universe);
       Dream.get
         (Url.Package.documentation ":name" ~version:":version" ~page:"**")
-        ((Handler.package_documentation t) Handler.Package);
+        ((Handler.package_documentation t false) Handler.Package);
+      Dream.get
+        (Url.Package.src ":name" ~version:":version" ~page:"**")
+        ((Handler.package_documentation t true) Handler.Package);
       Dream.get
         (Url.Package.documentation ~hash:":hash" ~page:"**" ":name"
            ~version:":version")
-        ((Handler.package_documentation t) Handler.Universe);
+        ((Handler.package_documentation t false) Handler.Universe);
+      Dream.get
+        (Url.Package.src ~hash:":hash" ~page:"**" ":name"
+           ~version:":version")
+        ((Handler.package_documentation t true) Handler.Universe);
       Dream.get
         (Url.Package.file ":name" ~version:":version" ~filepath:"**")
         ((Handler.package_file t) Handler.Package);

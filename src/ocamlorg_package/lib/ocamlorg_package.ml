@@ -213,6 +213,7 @@ module Documentation = struct
     | Class
     | ClassType
     | File
+    | Source
 
   let breadcrumb_kind_from_string s =
     match s with
@@ -223,6 +224,7 @@ module Documentation = struct
     | "class" -> Class
     | "class-type" -> ClassType
     | "file" -> File
+    | "source" -> Source
     | _ ->
         if String.starts_with ~prefix:"argument-" s then
           let i = List.hd (List.tl (String.split_on_char '-' s)) in
@@ -260,9 +262,11 @@ module Documentation = struct
     match Yojson.Safe.from_string s with
     | `Assoc
         [
+          ("type", `String "documentation");
           ("uses_katex", `Bool uses_katex);
           ("breadcrumbs", `List json_breadcrumbs);
           ("toc", `List json_toc);
+          ("source_anchor", _);
           ("preamble", `String preamble);
           ("content", `String content);
         ] ->
@@ -277,6 +281,24 @@ module Documentation = struct
           toc = List.map toc_of_json json_toc;
           content = preamble ^ content;
         }
+      | `Assoc
+        [
+          ("type", `String "source");
+          ("breadcrumbs", `List json_breadcrumbs);
+          ("content", `String content);
+        ] ->
+        let breadcrumbs =
+          match List.map breadcrumb_from_json json_breadcrumbs with
+          | _ :: _ :: _ :: _ :: breadcrumbs -> breadcrumbs
+          | _ -> failwith "Not enough breadcrumbs"
+        in
+        {
+          uses_katex=false;
+          breadcrumbs;
+          toc = [];
+          content = content;
+        }
+
     | _ -> raise (Invalid_argument "malformed .html.json file")
 end
 
@@ -348,6 +370,13 @@ let documentation_page ~kind t path =
   let url = package_url ^ "doc/" ^ path ^ ".json" in
   odoc_page ~url
 
+let src_page ~kind t path =
+    let package_url =
+      package_url ~kind (Name.to_string t.name) (Version.to_string t.version)
+    in
+    let url = package_url ^ "src/" ^ path ^ ".json" in
+    odoc_page ~url
+  
 let file ~kind t path =
   let package_url =
     package_url ~kind (Name.to_string t.name) (Version.to_string t.version)

@@ -46,7 +46,7 @@ let str_path =
         | Page s -> [""; s])
 in
 Package_layout.render
-~title:(Printf.sprintf "%s %s · OCaml Package" package.name (Package.render_version package))
+~title:(Printf.sprintf "%s %s · OCaml Package (doc page)" package.name (Package.render_version package))
 ~description:(Printf.sprintf "%s %s: %s" package.name (Package.render_version package) package.synopsis)
 ~package
 ~path

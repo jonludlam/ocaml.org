@@ -77,6 +77,7 @@ module Documentation : sig
     | Class
     | ClassType
     | File
+    | Source
 
   type breadcrumb = { name : string; href : string; kind : breadcrumb_kind }
 
@@ -138,6 +139,14 @@ val documentation_page :
 (** Get the rendered content of an HTML page for a package given its URL
     relative to the root page of the documentation. *)
 
+val src_page :
+  kind:[< `Package | `Universe of string ] ->
+  t ->
+  string ->
+  Documentation.t option Lwt.t
+(** Get the rendered content of an HTML page for a package given its URL
+    relative to the root page of the documentation. *)
+  
 val file :
   kind:[< `Package | `Universe of string ] ->
   t ->
