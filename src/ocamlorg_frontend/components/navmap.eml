@@ -8,6 +8,7 @@ type kind =
   | Class
   | Class_type
   | File
+  | Source
 
 type toc = {
   title : string;
@@ -26,22 +27,25 @@ let kind_title = function
   | Parameter -> "Parameter"
   | Class -> "Class"
   | Class_type -> "Class type"
+  | Source -> "Source"
   | _ -> "?"
 
 let title_style = "flex-1 flex-nowrap py-1 md:py-0.5 pr-1 text-title dark:text-dark-title"
 
-let htmx_attributes = "hx-boost=\"true\" hx-ext=\"multi-swap\" hx-swap=\"multi:#htmx-head,#htmx-sidebar,#htmx-content,#htmx-right-sidebar,#htmx-breadcrumbs\" hx-push-url=\"true\""
+let htmx_attributes = "" (* "hx-boost=\"true\" hx-ext=\"multi-swap\" hx-swap=\"multi:#htmx-head,#htmx-sidebar,#htmx-content,#htmx-right-sidebar,#htmx-breadcrumbs\" hx-push-url=\"true\""*)
 
 let icon_style = function
+  | Page -> "navmap-tag page-tag"
   | Library -> "navmap-tag library-tag"
   | Module -> "navmap-tag module-tag"
   | Module_type -> "navmap-tag module-type-tag"
   | Parameter -> "navmap-tag parameter-tag"
   | Class -> "navmap-tag class-tag"
   | Class_type -> "navmap-tag class-type-tag"
+  | Source -> "navmap-tag source-tag"
   | _ -> "navmap-tag"
 
-let rec nested_render ~path (item : toc) =
+let rec nested_render ~id ~path (item : toc) =
   match item.children with
   | [] ->
     let fragment = match path with
@@ -51,7 +55,7 @@ let rec nested_render ~path (item : toc) =
     let active_style = if item.title = fragment then "bg-gray-200 dark:bg-dark-tertiary_bt_hover font-medium" else "border-transparent" in
     if fragment != "" && item.kind = Library && fragment != item.title then "" else
     <div class="box-border border <%s active_style %> pl-1 ml-1">
-      <div class="flex flex-nowrap" title="<%s kind_title item.kind ^ " " ^ item.title %>">
+      <div class="flex flex-nowrap" title="<%s kind_title item.kind ^ " " ^ item.title ^ " fragment:" ^ fragment %>">
         <% (match item.href with | None -> %>
           <span class="no-expand"><span class="<%s if item.title = fragment then "" else "opacity-80" %> <%s icon_style item.kind %>"></span></span>
           <span class="sm <%s title_style %>"><%s! item.title %></span>
@@ -72,30 +76,31 @@ let rec nested_render ~path (item : toc) =
       | v :: _ -> (item.kind = Library && (List.length item.children <= 2), [], v)
       | [] -> (item.kind = Library && (List.length item.children <= 2), [], "")
     in
+    
     let active_style = if item.title = fragment then (if List.length path = 0 then "bg-gray-200 dark:bg-dark-tertiary_bt_hover font-medium dark:font-semibold" else "border-transparent bg-gray-100 dark:bg-dark-tertiary_bt_hover font-medium dark:font-semibold") else "border-transparent" in
-    <div x-data="{ open: <%s if default_open then "true" else "false" %> }">
-      <div class="box-border border <%s active_style %> cursor-pointer pl-1 ml-1"  :class="open ? 'nav-expand' : ''">
-        <div class="flex flex-nowrap" title="<%s kind_title item.kind ^ " " ^ item.title %>">
-          <span class="icon-expand" x-on:click="open = ! open" :class="open ? 'open' : ''" >
+    <div>
+      <div class="box-border border <%s active_style %> cursor-pointer pl-1 ml-1 navexpand-<%s id %> <%s if default_open then "navexpand" else "" %>">
+        <div class="flex flex-nowrap" title="<%s kind_title item.kind ^ " " ^ item.title ^ " fragment: " ^ fragment %>">
+          <span onclick="" open-<%s id %> class="icon-expand <%s if default_open then "open" else "" %>" >
             <span class="<%s if item.title = fragment then "" else "opacity-80" %> <%s icon_style item.kind %>"></span>
           </span>
           <% (match item.href with | None -> %>
-            <span x-on:click="open = ! open" class="<%s title_style %> <%s if item.title = fragment then "white-200" else "gray-900" %>">
+            <span onclick="toggleDisplay('<%s id %>')" class="<%s title_style %> <%s if item.title = fragment then "white-200" else "gray-900" %>">
               <%s! item.title %> 
-              <span class="arrow-expand absolute right-0.5 px-3" :class="open ? 'open' : ''"><%s! Icons.chevron_down "h-5 w-5" %></span>
+              <span class="arrow-expand absolute right-0.5 px-3 open-<%s id %> <%s if default_open then "open" else "" %>"><%s! Icons.chevron_down "h-5 w-5" %></span>
             </span>
           <% | Some href -> %>
           <a href="<%s href %>" <%s! htmx_attributes %> class="<%s title_style %> overflow-hidden truncate text-title dark:text-dark-title transition-colors hover:text-primary">
             <%s! item.title %>
           </a>
-          <span x-on:click="open = ! open" class="sign-expand mr-2 px-2" :class="open ? 'open' : ''"></span>
+          <span onclick="toggleDisplay('<%s id %>')" class="open-<%s id %> sign-expand mr-2 px-2 <%s if default_open then "open" else "" %>"></span>
           <% ); %>
         </div>
       </div>
-      <ul x-show="open" class="ml-2.5 border-l border-white transition-colors">
-        <% children |> List.iter begin fun item -> %>
+      <ul id="<%s id %>" <%s! if default_open then "" else "style=\"display: none;\"" %> class="ml-2.5 border-l border-white transition-colors">
+        <% children |> List.iteri begin fun i item -> %>
           <li>
-            <%s! nested_render ~path item %>
+            <%s! let new_id = id ^ "-" ^ string_of_int i in nested_render ~id:new_id ~path item %>
           </li>
         <% end; %>
       </ul>
@@ -103,22 +108,32 @@ let rec nested_render ~path (item : toc) =
 
 
 let render
-~(package: Package.package)
 ~path
 (maptoc : t)
 =
-  let version = Package.url_version package in
+  Logs.info (fun m -> m "path: [%a]" Fmt.Dump.(list string) path);
   <div class="navmap pb-12">
+    <script type="text/javascript"> <%s! 
+{|function toggleDisplay(id) { 
+   target=document.getElementById(id);
+   target.style.display =
+     (target.style.display == 'none') ? 'block' : 'none';
+   elts=document.getElementsByClass("open-"+id);
+   elts.foreach(elt => elt.classList.toggle("open"));
+   elts=document.getElementsByClass("navexpand-"+id);
+   elts.foreach(elt => elt.classList.toggle("navexpand"));
+} |} %>
+    </script>
     <% (match maptoc with [] ->  %>
     <span class="block py-2 text-gray-700">Package contains no libraries</span>
-    <% | _ -> %>
-      <a class="py-1 font-medium text-content dark:text-dark-content hover:text-primary dark:hover:text-dark-primary transition-colors" href="<%s Url.Package.documentation package.name ?version %>">
-        package <%s package.name %>
+    <% | x::_ -> %>
+      <a class="py-1 font-medium text-content dark:text-dark-content hover:text-primary dark:hover:text-dark-primary transition-colors" href="<%s match x.href with | Some x -> x | None -> "#" %>">
+        <%s! x.title %>
       </a>
     <ul>
-      <% maptoc |> List.iter begin fun item -> %>
+      <% x.children |> List.iteri begin fun i item -> %>
       <li class="pl-0.5">
-        <%s! nested_render ~path item %>
+        <%s! nested_render ~id:("nm-" ^ string_of_int i) ~path item %>
       </li>
       <% end; %>
     </ul>
@@ -128,11 +143,13 @@ let render
   <% | _ -> %>
     <div class="py-24 text-title dark:text-dark-title">
     Legend:<br>
+    <span class="<%s icon_style Page %>" style="display:inline-block;color:white"></span>Page<br>
     <span class="<%s icon_style Library %>" style="display:inline-block;color:white"></span>Library<br>
     <span class="<%s icon_style Module %>" style="display:inline-block;color:white"></span>Module<br>
     <span class="<%s icon_style Module_type %>" style="display:inline-block;color:white"></span>Module type<br>
     <span class="<%s icon_style Parameter %>" style="display:inline-block;color:white"></span>Parameter<br>
     <span class="<%s icon_style Class %>" style="display:inline-block;color:white"></span>Class<br>
-    <span class="<%s icon_style Class_type %>" style="display:inline-block;color:white"></span>Class type
+    <span class="<%s icon_style Class_type %>" style="display:inline-block;color:white"></span>Class type<br>
+    <span class="<%s icon_style Source %>" style="display:inline-block;color:white"></span>Source
     </div>
   <% ); %>

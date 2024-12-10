@@ -5,7 +5,7 @@ let opam_polling =
 
 let documentation_url =
   Sys.getenv_opt "OCAMLORG_DOC_URL"
-  |> Option.value ~default:"https://docs-data.ocaml.org/live/"
+  |> Option.value ~default:"http://5.102.169.186:8888/"
 
 let package_caches_ttl =
   env_with_default "OCAMLORG_PACKAGE_CACHES_TTL" "3600" |> float_of_string

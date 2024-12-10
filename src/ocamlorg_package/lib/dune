@@ -1,5 +1,6 @@
 (library
  (name ocamlorg_package)
+ (preprocess (pps ppx_deriving_yojson))
  (libraries
   opam-format
   bos
@@ -11,4 +12,5 @@
   yojson
   cohttp
   cohttp-lwt-unix
-  voodoo_serialize))
+  voodoo_serialize
+  ppx_deriving_yojson))
